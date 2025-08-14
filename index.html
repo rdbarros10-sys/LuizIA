@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <title>JARVIS Mobile</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="avatar.png">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00e6ff;
+            font-family: 'Arial', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .image-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .image-container img {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 3px solid #00e6ff;
+            filter: drop-shadow(0 0 20px #00e6ff);
+            transition: all 0.3s ease;
+            object-fit: cover;
+        }
+
+        .image-container.listening img {
+            animation: scan 2s linear infinite;
+            transform: scale(1.05);
+        }
+
+        @keyframes scan {
+            0% { 
+                filter: drop-shadow(0 0 20px #00e6ff) hue-rotate(0deg);
+                border-color: #00e6ff;
+            }
+            25% { 
+                filter: drop-shadow(0 0 30px #00ff80) hue-rotate(90deg);
+                border-color: #00ff80;
+            }
+            50% { 
+                filter: drop-shadow(0 0 25px #0080ff) hue-rotate(180deg);
+                border-color: #0080ff;
+            }
+            75% { 
+                filter: drop-shadow(0 0 30px #8000ff) hue-rotate(270deg);
+                border-color: #8000ff;
+            }
+            100% { 
+                filter: drop-shadow(0 0 20px #00e6ff) hue-rotate(360deg);
+                border-color: #00e6ff;
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 20px 0 10px;
+            text-shadow: 0 0 10px #00e6ff;
+            letter-spacing: 8px;
+            font-weight: 300;
+        }
+
+        .description {
+            font-size: 1rem;
+            margin-bottom: 40px;
+            text-align: center;
+            opacity: 0.8;
+            line-height: 1.4;
+        }
+
+        .input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .talk {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border: none;
+            background: linear-gradient(45deg, #111, #222);
+            color: #00e6ff;
+            border-radius: 50%;
+            font-size: 28px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 0 20px rgba(0, 230, 255, 0.3),
+                inset 0 0 20px rgba(0, 230, 255, 0.1);
+            border: 2px solid rgba(0, 230, 255, 0.3);
+        }
+
+        .talk:active {
+            transform: scale(0.95);
+        }
+
+        .talk.listening {
+            transform: scale(1.1);
+            background: linear-gradient(45deg, #001a2e, #003366);
+            box-shadow: 
+                0 0 40px rgba(0, 230, 255, 0.8),
+                inset 0 0 30px rgba(0, 230, 255, 0.2);
+            animation: pulseGlow 1.5s infinite alternate;
+            border: 2px solid #00e6ff;
+        }
+
+        @keyframes pulseGlow {
+            from { 
+                box-shadow: 
+                    0 0 30px rgba(0, 230, 255, 0.6),
+                    inset 0 0 20px rgba(0, 230, 255, 0.1);
+            }
+            to { 
+                box-shadow: 
+                    0 0 50px rgba(0, 230, 255, 1),
+                    inset 0 0 40px rgba(0, 230, 255, 0.3);
+            }
+        }
+
+        .talk.listening::before,
+        .talk.listening::after {
+            content: "";
+            position: absolute;
+            border: 2px solid rgba(0, 230, 255, 0.4);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: rings 2s infinite ease-out;
+        }
+
+        .talk.listening::after {
+            animation-delay: 1s;
+            border-color: rgba(0, 230, 255, 0.2);
+        }
+
+        @keyframes rings {
+            0% { 
+                width: 90px; 
+                height: 90px; 
+                opacity: 0.8; 
+            }
+            100% { 
+                width: 200px; 
+                height: 200px; 
+                opacity: 0; 
+            }
+        }
+
+        .content {
+            font-size: 1.1rem;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 230, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px 20px;
+            border: 1px solid rgba(0, 230, 255, 0.3);
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .status {
+            font-size: 1rem;
+            min-height: 24px;
+            opacity: 0.7;
+            text-align: center;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            border: none;
+            background: rgba(0, 230, 255, 0.2);
+            color: #00e6ff;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 230, 255, 0.3);
+        }
+
+        .control-btn:active {
+            transform: scale(0.9);
+            background: rgba(0, 230, 255, 0.4);
+        }
+
+        .error-message {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid rgba(255, 0, 0, 0.3);
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* Responsividade para telas muito pequenas */
+        @media (max-width: 350px) {
+            .main {
+                padding: 15px;
+            }
+            
+            .image-container img {
+                width: 150px;
+                height: 150px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+                letter-spacing: 4px;
+            }
+            
+            .talk {
+                width: 70px;
+                height: 70px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section class="main">
+        <div class="image-container">
+            <img src="giphy.gif" alt="JARVIS" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjMDBlNmZmIiBvZmZzZXQ9IjAiLz48c3RvcCBzdG9wLWNvbG9yPSIjMDA4MGZmIiBvZmZzZXQ9IjEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHRleHQgeD0iMTAwIiB5PSIxMTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBUlZJUzwvdGV4dD48L3N2Zz4='">
+            <h1>J A R V I S</h1>
+            <p class="description">Assistente virtual inteligente<br>Toque o microfone para começar</p>
+        </div>
+        
+        <div class="input">
+            <button class="talk">🎤</button>
+            <div class="content">Toque no microfone para falar</div>
+            <div class="status"></div>
+            <div id="error" class="error-message" style="display: none;"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="location.reload()" title="Reiniciar">🔄</button>
+            <button class="control-btn" onclick="toggleFullscreen()" title="Tela cheia">📱</button>
+        </div>
+    </section>
+
+    <script>
+        const btn = document.querySelector('.talk');
+        const content = document.querySelector('.content');
+        const statusText = document.querySelector('.status');
+        const imageContainer = document.querySelector('.image-container');
+        const errorDiv = document.getElementById('error');
+
+        // Função para falar
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1;
+                utterance.volume = 1;
+                utterance.pitch = 1;
+                utterance.lang = 'pt-BR';
+                
+                // Pausar qualquer fala anterior
+                speechSynthesis.cancel();
+                speechSynthesis.speak(utterance);
+            } else {
+                showError('Síntese de voz não suportada neste navegador');
+            }
+        }
+
+        // Saudar conforme horário
+        function wishMe() {
+            const hour = new Date().getHours();
+            if (hour < 12) speak("Bom dia! Como posso ajudar?");
+            else if (hour < 18) speak("Boa tarde! Em que posso ajudar?");
+            else speak("Boa noite! Pronto para trabalhar.");
+        }
+
+        // Mostrar erro
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Verificar suporte
+        function checkSupport() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showError('Reconhecimento de voz não suportado. Use Chrome ou Safari.');
+                return false;
+            }
+            return true;
+        }
+
+        // Reconhecimento de voz
+        let recognition = null;
+        let isListening = false;
+
+        function initRecognition() {
+            if (!checkSupport()) return;
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                isListening = true;
+                statusText.textContent = "Escutando...";
+                btn.classList.add('listening');
+                imageContainer.classList.add('listening');
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    transcript += event.results[i][0].transcript;
+                }
+
+                content.textContent = transcript;
+
+                const lastResult = event.results[event.results.length - 1];
+                if (lastResult.isFinal) {
+                    statusText.textContent = "Processando...";
+                    takeCommand(transcript.toLowerCase().trim());
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Erro no reconhecimento:', event.error);
+                stopListening();
+                
+                switch(event.error) {
+                    case 'no-speech':
+                        showError('Nenhuma fala detectada. Tente novamente.');
+                        break;
+                    case 'network':
+                        showError('Erro de rede. Verifique sua conexão.');
+                        break;
+                    case 'not-allowed':
+                        showError('Permissão de microfone negada. Permita o acesso.');
+                        break;
+                    default:
+                        showError('Erro no reconhecimento: ' + event.error);
+                }
+            };
+
+            recognition.onend = () => {
+                stopListening();
+            };
+        }
+
+        function stopListening() {
+            isListening = false;
+            btn.classList.remove('listening');
+            imageContainer.classList.remove('listening');
+            if (statusText.textContent === "Escutando...") {
+                statusText.textContent = "Toque para falar";
+            }
+        }
+
+        // Eventos do botão
+        btn.addEventListener('click', async () => {
+            if (isListening) {
+                recognition?.stop();
+                return;
+            }
+
+            // Solicitar permissão do microfone
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                content.textContent = "🎤 Ouvindo...";
+                recognition?.start();
+            } catch (err) {
+                showError('Permissão do microfone necessária para funcionar');
+            }
+        });
+
+        // Processar comandos
+        function takeCommand(message) {
+            statusText.textContent = "Executando...";
+            
+            // Normalizar texto
+            const normalizedMessage = message
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+
+            if (normalizedMessage.includes('ola') || normalizedMessage.includes('oi')) {
+                speak("Olá! Como posso ajudar?");
+            }
+            else if (normalizedMessage.includes("google")) {
+                const query = normalizedMessage.replace("google", "").trim();
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, "_blank");
+                speak("Aqui está o que encontrei no Google.");
+            }
+            else if (normalizedMessage.includes("youtube")) {
+                const query = normalizedMessage.replace("youtube", "").trim();
+                window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, "_blank");
+                speak("Aqui está o que encontrei no YouTube.");
+            }
+            else if (normalizedMessage.includes("whatsapp")) {
+                window.open("https://web.whatsapp.com", "_blank");
+                speak("Abrindo WhatsApp Web.");
+            }
+            else if (normalizedMessage.includes('hora')) {
+                const time = new Date().toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                speak(`Agora são ${time}`);
+            }
+            else if (normalizedMessage.includes('data')) {
+                const date = new Date().toLocaleDateString('pt-BR');
+                speak(`Hoje é ${date}`);
+            }
+            else if (normalizedMessage.includes('facebook')) {
+                window.open("https://facebook.com", "_blank");
+                speak("Abrindo Facebook.");
+            }
+            else if (normalizedMessage.includes('instagram')) {
+                window.open("https://instagram.com", "_blank");
+                speak("Abrindo Instagram.");
+            }
+            else if (normalizedMessage.includes('tempo') || normalizedMessage.includes('clima')) {
+                window.open("https://www.google.com/search?q=tempo+clima", "_blank");
+                speak("Aqui está a previsão do tempo.");
+            }
+            else if (normalizedMessage.includes('noticias')) {
+                window.open("https://www.google.com/news", "_blank");
+                speak("Aqui estão as últimas notícias.");
+            }
+            else {
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(message)}`, "_blank");
+                speak(`Encontrei informações sobre ${message}`);
+            }
+            
+            setTimeout(() => {
+                statusText.textContent = "Pronto para próximo comando";
+                content.textContent = "Toque no microfone para falar";
+            }, 2000);
+        }
+
+        // Tela cheia
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen?.();
+            } else {
+                document.exitFullscreen?.();
+            }
+        }
+
+        // Inicialização
+        window.addEventListener('load', () => {
+            initRecognition();
+            setTimeout(() => {
+                speak("JARVIS ativado e pronto!");
+                wishMe();
+            }, 1000);
+        });
+
+        // Prevenir zoom em double-tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', (event) => {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // Manifest para PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript,').catch(() => {});
+        }
+    </script>
+</body>
+</html>

@@ -1,3 +1,10 @@
+
+function normalizeBRPhone(p) {
+    let digits = String(p).replace(/\D/g, '');
+    if (digits.startsWith('55')) digits = digits.slice(2);
+    return '55' + digits;
+}
+
 // ==================== VARIÁVEIS GLOBAIS ====================
 let btn = null;
 let content = null;
@@ -83,8 +90,17 @@ function showError(message) {
 // ==================== VERIFICAÇÃO DE SUPORTE ====================
 function checkSupport() {
     debug('Verificando suporte...');
-    
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!isSecureContext) {
+        showError('Este recurso exige HTTPS ou localhost');
+        return false;
+    }
+
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition ||
+        window.mozSpeechRecognition ||
+        window.msSpeechRecognition;
+
     if (!SpeechRecognition) {
         showError('Reconhecimento de voz não suportado neste navegador');
         return false;
@@ -97,92 +113,6 @@ function checkSupport() {
 
     debug('Suporte verificado com sucesso');
     return true;
-}
-
-// ==================== RECONHECIMENTO DE VOZ ====================
-function initRecognition() {
-    if (!checkSupport()) return false;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    
-    recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-        debug('Reconhecimento iniciado');
-        isListening = true;
-        if (statusText) statusText.textContent = "Escutando...";
-        if (btn) btn.classList.add('listening');
-        if (imageContainer) imageContainer.classList.add('listening');
-    };
-
-    recognition.onresult = (event) => {
-        let transcript = '';
-        let confidence = 0;
-        
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            transcript += event.results[i][0].transcript;
-            confidence = Math.max(confidence, event.results[i][0].confidence);
-        }
-
-        debug('Resultado parcial: ' + transcript);
-        if (content) content.textContent = transcript;
-
-        const lastResult = event.results[event.results.length - 1];
-        if (lastResult.isFinal) {
-            debug('Resultado final: ' + transcript + ' (confiança: ' + confidence + ')');
-            if (statusText) statusText.textContent = "Processando...";
-            
-            // Aguardar um pouco antes de processar
-            setTimeout(() => {
-                takeCommand(transcript.toLowerCase().trim());
-            }, 500);
-        }
-    };
-
-    recognition.onerror = (event) => {
-        debug('Erro no reconhecimento: ' + event.error);
-        stopListening();
-        
-        switch(event.error) {
-            case 'no-speech':
-                showError('Nenhuma fala detectada. Tente novamente.');
-                break;
-            case 'network':
-                showError('Erro de conexão. Verifique sua internet.');
-                break;
-            case 'not-allowed':
-                showError('Permissão de microfone negada. Permita o acesso nas configurações.');
-                break;
-            case 'service-not-allowed':
-                showError('Serviço de reconhecimento bloqueado. Tente em HTTPS.');
-                break;
-            case 'aborted':
-                // Silenciar erro de abort, é normal
-                break;
-            default:
-                showError('Erro no reconhecimento: ' + event.error);
-        }
-    };
-
-    recognition.onend = () => {
-        debug('Reconhecimento finalizado');
-        stopListening();
-    };
-
-    return true;
-}
-
-function stopListening() {
-    isListening = false;
-    if (btn) btn.classList.remove('listening');
-    if (imageContainer) imageContainer.classList.remove('listening');
-    if (statusText && statusText.textContent === "Escutando...") {
-        statusText.textContent = "Toque para falar";
-    }
 }
 
 // ==================== PERMISSÕES ====================
@@ -234,47 +164,21 @@ function extractLocation(text) {
 }
 
 function tryNativeApp(nativeUrl, webUrl, successMessage) {
-    // Tentar abrir app nativo
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isMobile) {
+        window.open(webUrl, '_blank');
+        speak(successMessage);
+        return;
+    }
     const iframe = document.createElement('iframe');
     iframe.style.display = 'none';
     iframe.src = nativeUrl;
     document.body.appendChild(iframe);
-    
-    // Fallback para versão web após timeout
     setTimeout(() => {
         document.body.removeChild(iframe);
         window.open(webUrl, '_blank');
     }, 2000);
-    
     speak(successMessage);
-}
-
-// ==================== CONTACT PICKER API ====================
-function checkContactPickerSupport() {
-    return 'contacts' in navigator && 'ContactsManager' in window;
-}
-
-async function selectContactFromPicker(properties = ['name', 'tel']) {
-    try {
-        debug('Abrindo seletor de contatos...');
-        
-        const contacts = await navigator.contacts.select(properties, { multiple: false });
-        
-        if (contacts && contacts.length > 0) {
-            const contact = contacts[0];
-            debug('Contato selecionado: ' + JSON.stringify(contact));
-            
-            return {
-                name: contact.name ? contact.name[0] : null,
-                tel: contact.tel ? contact.tel[0] : null
-            };
-        }
-        
-        return null;
-    } catch (error) {
-        debug('Erro ao acessar contatos: ' + error.message);
-        return null;
-    }
 }
 
 async function findContactByName(targetName) {
@@ -824,12 +728,13 @@ window.addEventListener('beforeunload', () => {
 
 // Adicionar listener para erros globais
 window.addEventListener('error', (event) => {
-    debug('Erro global capturado: ' + event.error?.message || event.message);
+    const msg = (event.error && event.error.message) ? event.error.message : event.message;
+    debug('Erro global capturado: ' + msg);
 });
 
-// Adicionar listener para promises rejeitadas
 window.addEventListener('unhandledrejection', (event) => {
-    debug('Promise rejeitada: ' + event.reason?.message || event.reason);
+    const msg = (event.reason && event.reason.message) ? event.reason.message : String(event.reason);
+    debug('Promise rejeitada: ' + msg);
     event.preventDefault();
 });
 

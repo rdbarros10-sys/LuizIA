@@ -8,8 +8,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <title>JARVIS Mobile</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="avatar.png">
     <style>
         * {
             margin: 0;
@@ -233,9 +231,24 @@
             border-radius: 5px;
             margin-top: 10px;
             font-size: 0.9rem;
+            display: none;
         }
 
-        /* Responsividade para telas muito pequenas */
+        .debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
         @media (max-width: 350px) {
             .main {
                 padding: 15px;
@@ -262,7 +275,7 @@
 <body>
     <section class="main">
         <div class="image-container">
-            <img src="giphy.gif" alt="JARVIS" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjMDBlNmZmIiBvZmZzZXQ9IjAiLz48c3RvcCBzdG9wLWNvbG9yPSIjMDA4MGZmIiBvZmZzZXQ9IjEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHRleHQgeD0iMTAwIiB5PSIxMTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBUlZJUzwvdGV4dD48L3N2Zz4='">
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjMDBlNmZmIiBvZmZzZXQ9IjAiLz48c3RvcCBzdG9wLWNvbG9yPSIjMDA4MGZmIiBvZmZzZXQ9IjEiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSJ1cmwoI2cpIi8+PHRleHQgeD0iMTAwIiB5PSIxMTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkpBUlZJUzwvdGV4dD48L3N2Zz4=" alt="JARVIS">
             <h1>J A R V I S</h1>
             <p class="description">Assistente virtual inteligente<br>Toque o microfone para começar</p>
         </div>
@@ -270,74 +283,324 @@
         <div class="input">
             <button class="talk">🎤</button>
             <div class="content">Toque no microfone para falar</div>
-            <div class="status"></div>
-            <div id="error" class="error-message" style="display: none;"></div>
+            <div class="status">Sistema inicializando...</div>
+            <div id="error" class="error-message"></div>
         </div>
         
         <div class="controls">
             <button class="control-btn" onclick="location.reload()" title="Reiniciar">🔄</button>
             <button class="control-btn" onclick="toggleFullscreen()" title="Tela cheia">📱</button>
+            <button class="control-btn" onclick="toggleDebug()" title="Debug">🐛</button>
         </div>
     </section>
 
+    <div id="debug" class="debug"></div>
+
     <script>
+        // ==================== VARIÁVEIS GLOBAIS ====================
+        let btn = null;
+        let content = null;
+        let statusText = null;
+        let imageContainer = null;
+        let errorDiv = null;
+        let debugDiv = null;
+        let recognition = null;
+        let isListening = false;
+        let speechSynthesis = window.speechSynthesis;
+        let isInitialized = false;
 
-// ==================== GEMINI AI CONFIG ====================
-const GEMINI_API_KEY = "SUA_API_KEY_AQUI"; // 🔑 coloque sua chave da API Gemini aqui
-async function queryGemini(prompt) {
-    try {
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ role: "user", parts: [{ text: prompt }]}]
-                }),
+        // ==================== GEMINI AI CONFIG ====================
+        const GEMINI_API_KEY = "AIzaSyCDC-EhjOGfGCWgJEGzvgfRtQwpusDA-Lg"; // 🔑 coloque sua chave da API Gemini aqui
+
+        async function queryGemini(prompt) {
+            try {
+                const response = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ role: "user", parts: [{ text: prompt }]}]
+                        }),
+                    }
+                );
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não encontrei resposta.";
+                return text;
+            } catch (err) {
+                debug("Erro Gemini: " + err.message);
+                return "Erro ao consultar Gemini.";
             }
-        );
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não encontrei resposta.";
-        return text;
-    } catch (err) {
-        showError("Erro ao consultar Gemini: " + err.message);
-        return "Erro ao consultar Gemini.";
-    }
-}
-
-        const btn = document.querySelector('.talk');
-        const content = document.querySelector('.content');
-        const statusText = document.querySelector('.status');
-        const imageContainer = document.querySelector('.image-container');
-        const errorDiv = document.getElementById('error');
-
-        // Função para falar
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 1;
-                utterance.volume = 1;
-                utterance.pitch = 1;
-                utterance.lang = 'pt-BR';
-                
-                // Pausar qualquer fala anterior
-                speechSynthesis.cancel();
-                speechSynthesis.speak(utterance);
-            } else {
-                (async () => {
-                    const geminiResponse = await queryGemini(message);
-                    content.textContent = geminiResponse;
-                    speak(geminiResponse);
-                })();
-            }
-            
-            setTimeout(() => {
-                statusText.textContent = "Pronto para próximo comando";
-                content.textContent = "Toque no microfone para falar";
-            }, 2000);
         }
 
-        // Tela cheia
+        // ==================== FUNÇÕES DE DEBUG ====================
+        function debug(message) {
+            console.log('[JARVIS]', message);
+            if (debugDiv) {
+                debugDiv.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            }
+        }
+
+        function toggleDebug() {
+            if (debugDiv) {
+                debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // ==================== FUNÇÕES DE FALA ====================
+        function speak(text) {
+            debug('Tentando falar: ' + text);
+            
+            if (!speechSynthesis) {
+                showError('Síntese de voz não disponível');
+                return;
+            }
+
+            speechSynthesis.cancel();
+
+            setTimeout(() => {
+                try {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.volume = 1;
+                    utterance.pitch = 1;
+                    utterance.lang = 'pt-BR';
+                    
+                    utterance.onstart = () => debug('Fala iniciada');
+                    utterance.onend = () => {
+                        debug('Fala finalizada');
+                        setTimeout(() => {
+                            if (statusText) statusText.textContent = "Toque no microfone para falar";
+                            if (content) content.textContent = "Toque no microfone para falar";
+                        }, 1000);
+                    };
+                    utterance.onerror = (e) => debug('Erro na fala: ' + e.error);
+
+                    speechSynthesis.speak(utterance);
+                } catch (error) {
+                    debug('Erro ao tentar falar: ' + error.message);
+                    showError('Erro na síntese de voz: ' + error.message);
+                }
+            }, 100);
+        }
+
+        function wishMe() {
+            const hour = new Date().getHours();
+            if (hour < 12) {
+                speak("Bom dia! Como posso ajudar?");
+            } else if (hour < 18) {
+                speak("Boa tarde! Em que posso ajudar?");
+            } else {
+                speak("Boa noite! Pronto para trabalhar.");
+            }
+        }
+
+        // ==================== FUNÇÕES DE ERRO ====================
+        function showError(message) {
+            debug('Erro: ' + message);
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // ==================== VERIFICAÇÃO DE SUPORTE ====================
+        function checkSupport() {
+            debug('Verificando suporte...');
+            
+            if (!window.isSecureContext) {
+                showError('Este recurso exige HTTPS ou localhost');
+                return false;
+            }
+
+            const SpeechRecognition =
+                window.SpeechRecognition ||
+                window.webkitSpeechRecognition ||
+                window.mozSpeechRecognition ||
+                window.msSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                showError('Reconhecimento de voz não suportado neste navegador');
+                return false;
+            }
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                showError('Acesso ao microfone não suportado');
+                return false;
+            }
+
+            debug('Suporte verificado com sucesso');
+            return true;
+        }
+
+        // ==================== PERMISSÕES ====================
+        async function requestPermissions() {
+            try {
+                debug('Solicitando permissão do microfone...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+                
+                stream.getTracks().forEach(track => track.stop());
+                debug('Permissão concedida');
+                return true;
+            } catch (error) {
+                debug('Erro ao solicitar permissão: ' + error.message);
+                showError('Permissão do microfone necessária. Permita o acesso nas configurações do navegador.');
+                return false;
+            }
+        }
+
+        // ==================== COMANDOS ====================
+        function takeCommand(message) {
+            debug('Comando recebido: ' + message);
+            
+            if (content) content.textContent = message;
+            
+            const lowerMessage = message.toLowerCase().trim();
+
+            // Comandos básicos
+            if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('hey jarvis')) {
+                speak("Olá! Como posso ajudar você hoje?");
+                return;
+            }
+
+            if (lowerMessage.includes('que horas') || lowerMessage.includes('hora')) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('pt-BR');
+                speak(`Agora são ${timeString}`);
+                return;
+            }
+
+            if (lowerMessage.includes('que dia') || lowerMessage.includes('data')) {
+                const now = new Date();
+                const dateString = now.toLocaleDateString('pt-BR');
+                speak(`Hoje é ${dateString}`);
+                return;
+            }
+
+            if (lowerMessage.includes('obrigado') || lowerMessage.includes('valeu')) {
+                speak("De nada! Estou aqui para ajudar.");
+                return;
+            }
+
+            // Se tem API do Gemini configurada
+            if (GEMINI_API_KEY !== "AIzaSyCDC-EhjOGfGCWgJEGzvgfRtQwpusDA-Lg") {
+                queryGemini(message).then(response => {
+                    if (content) content.textContent = response;
+                    speak(response);
+                });
+            } else {
+                speak("Desculpe, não entendi o comando. Tente novamente.");
+            }
+        }
+
+        // ==================== INICIALIZAÇÃO DO RECONHECIMENTO DE VOZ ====================
+        function initRecognition() {
+            debug('Inicializando reconhecimento de voz...');
+            
+            if (!checkSupport()) {
+                return false;
+            }
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            recognition = new SpeechRecognition();
+            recognition.lang = "pt-BR";
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                debug('Reconhecimento iniciado');
+                isListening = true;
+                if (statusText) statusText.textContent = "🎤 Escutando...";
+                if (btn) btn.classList.add("listening");
+                if (imageContainer) imageContainer.classList.add("listening");
+            };
+
+            recognition.onresult = (event) => {
+                let transcript = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    transcript += event.results[i][0].transcript;
+                }
+                
+                debug('Resultado intermediário: ' + transcript);
+                if (content) content.textContent = transcript;
+
+                const lastResult = event.results[event.results.length - 1];
+                if (lastResult.isFinal) {
+                    debug('Resultado final: ' + transcript);
+                    takeCommand(transcript.toLowerCase().trim());
+                }
+            };
+
+            recognition.onerror = (event) => {
+                debug('Erro no reconhecimento: ' + event.error);
+                showError("Erro no reconhecimento: " + event.error);
+                isListening = false;
+                if (btn) btn.classList.remove("listening");
+                if (imageContainer) imageContainer.classList.remove("listening");
+            };
+
+            recognition.onend = () => {
+                debug('Reconhecimento finalizado');
+                isListening = false;
+                if (btn) btn.classList.remove("listening");
+                if (imageContainer) imageContainer.classList.remove("listening");
+                if (statusText) statusText.textContent = "Toque no microfone para falar";
+            };
+
+            debug('Reconhecimento configurado com sucesso');
+            return true;
+        }
+
+        // ==================== BOTÃO MICROFONE ====================
+        async function handleButtonClick(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            debug("Botão microfone clicado");
+
+            if (isListening) {
+                debug('Parando reconhecimento...');
+                if (recognition) recognition.stop();
+                return;
+            }
+
+            if (!isInitialized) {
+                showError("Sistema ainda não inicializado. Aguarde...");
+                return;
+            }
+
+            debug('Solicitando permissão...');
+            const hasPermission = await requestPermissions();
+            if (!hasPermission) {
+                debug('Permissão negada');
+                return;
+            }
+
+            if (recognition) {
+                debug('Iniciando reconhecimento...');
+                if (content) content.textContent = "🎤 Ouvindo...";
+                try {
+                    recognition.start();
+                } catch (error) {
+                    debug('Erro ao iniciar reconhecimento: ' + error.message);
+                    showError('Erro ao iniciar reconhecimento: ' + error.message);
+                }
+            } else {
+                showError("Reconhecimento de voz não inicializado");
+            }
+        }
+
+        // ==================== FUNÇÕES UTILITÁRIAS ====================
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen?.();
@@ -346,14 +609,47 @@ async function queryGemini(prompt) {
             }
         }
 
-        // Inicialização
-        window.addEventListener('load', () => {
-            initRecognition();
+        // ==================== INICIALIZAÇÃO GERAL ====================
+        function initialize() {
+            debug("Inicializando sistema...");
+
+            btn = document.querySelector(".talk");
+            content = document.querySelector(".content");
+            statusText = document.querySelector(".status");
+            imageContainer = document.querySelector(".image-container");
+            errorDiv = document.getElementById("error");
+            debugDiv = document.getElementById("debug");
+
+            if (!btn || !content || !statusText || !imageContainer || !errorDiv) {
+                console.error("Elementos principais não encontrados no DOM");
+                return;
+            }
+
+            // Event listeners para o botão
+            btn.addEventListener("click", handleButtonClick);
+            btn.addEventListener("touchstart", handleButtonClick, { passive: false });
+
+            // Inicialização com delay
             setTimeout(() => {
-                speak("JARVIS ativado e pronto!");
-                wishMe();
-            }, 1000);
-        });
+                if (initRecognition()) {
+                    isInitialized = true;
+                    debug("Sistema inicializado com sucesso");
+                    if (statusText) statusText.textContent = "Sistema pronto!";
+                    speak("JARVIS ativado e pronto!");
+                    setTimeout(wishMe, 2000);
+                } else {
+                    debug("Falha na inicialização");
+                    showError("Falha na inicialização do sistema");
+                }
+            }, 1500);
+        }
+
+        // ==================== INICIALIZAÇÃO ====================
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initialize);
+        } else {
+            setTimeout(initialize, 200);
+        }
 
         // Prevenir zoom em double-tap
         let lastTouchEnd = 0;
@@ -364,11 +660,6 @@ async function queryGemini(prompt) {
             }
             lastTouchEnd = now;
         }, false);
-
-        // Manifest para PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('data:text/javascript,').catch(() => {});
-        }
     </script>
 </body>
 </html>

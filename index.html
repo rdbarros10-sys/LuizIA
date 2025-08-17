@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
-    <title>JARVIS Mobile</title>
+    <title>Luiz IA Mobile</title>
     <style>
         * {
             margin: 0;
@@ -275,7 +275,7 @@
 <body>
     <section class="main">
         <div class="image-container">
-            <img src="giphy.gif" alt="JARVIS">
+            <img src="giphy.gif" alt="Luiz IA">
             <h1>J A R V I S</h1>
             <p class="description">Assistente virtual inteligente<br>Toque o microfone para começar</p>
         </div>
@@ -335,7 +335,7 @@
 
         // ==================== FUNÇÕES DE DEBUG ====================
         function debug(message) {
-            console.log('[JARVIS]', message);
+            console.log('[LUZ]', message);
             if (debugDiv) {
                 debugDiv.textContent = new Date().toLocaleTimeString() + ': ' + message;
             }
@@ -467,7 +467,7 @@
             const lowerMessage = message.toLowerCase().trim();
 
             // Comandos básicos
-            if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('hey jarvis')) {
+            if (lowerMessage.includes('olá') || lowerMessage.includes('oi') || lowerMessage.includes('hey Luz')) {
                 speak("Olá! Como posso ajudar você hoje?");
                 return;
             }
@@ -635,7 +635,7 @@
                     isInitialized = true;
                     debug("Sistema inicializado com sucesso");
                     if (statusText) statusText.textContent = "Sistema pronto!";
-                    speak("JARVIS ativado e pronto!");
+                    speak("Luiz IA ativado e pronto!");
                     setTimeout(wishMe, 2000);
                 } else {
                     debug("Falha na inicialização");
@@ -660,6 +660,13 @@
             }
             lastTouchEnd = now;
         }, false);
+
+        // Inicializar sistema de contatos após o LuzIA estar pronto
+        setTimeout(() => {
+            if (typeof initializeLUZWithContacts === 'function') {
+                initializeLUZWithContacts();
+            }
+        }, 3000);
     </script>
 </body>
 </html>

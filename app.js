@@ -5,6 +5,30 @@ let contactsDatabase = [];
 let isLearningMode = false;
 let learningContactName = '';
 
+// ==================== FUNÇÃO DE LANTERNA ====================
+    async function toggleFlashlight(enable) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" } // câmera traseira
+            });
+
+            const track = stream.getVideoTracks()[0];
+            const capabilities = track.getCapabilities();
+
+            if (capabilities.torch) {
+                await track.applyConstraints({
+                    advanced: [{ torch: enable }]
+                });
+                speak(enable ? "Lanterna ligada!" : "Lanterna desligada!");
+            } else {
+                speak("Seu dispositivo não suporta lanterna pelo navegador.");
+            }
+        } catch (err) {
+            console.error("Erro ao acessar a lanterna:", err);
+            speak("Não consegui acessar a lanterna.");
+        }
+    }
+
 // ==================== INICIALIZAÇÃO DO SISTEMA DE CONTATOS ====================
 function initializeContactsSystem() {
     debug('Inicializando sistema de contatos...');
@@ -662,6 +686,16 @@ function takeCommandWithSmartContacts(message) {
     
     const lowerMessage = message.toLowerCase().trim();
 
+        // ==================== COMANDOS DE LANTERNA ====================
+    if (lowerMessage.includes("ligar lanterna") || lowerMessage.includes("acender lanterna")) {
+        toggleFlashlight(true);
+        return;
+    }
+    if (lowerMessage.includes("desligar lanterna") || lowerMessage.includes("apagar lanterna")) {
+        toggleFlashlight(false);
+        return;
+    }
+
     // Comandos de gerenciamento de contatos
     if (lowerMessage.includes('listar contatos') || lowerMessage.includes('meus contatos')) {
         listContacts();
@@ -1074,7 +1108,7 @@ if (typeof window !== 'undefined') {
     window.deleteContact = deleteContact;
     window.saveNewContact = saveNewContact;
     window.closeContactsMenu = closeContactsMenu;
-    window.closeContactsList = closeContactsList;
+    window.closeContactsList = closeContactsList;a
     window.closeAddContactForm = closeAddContactForm;
     window.clearContacts = clearContacts;
     window.exportContacts = exportContacts;
